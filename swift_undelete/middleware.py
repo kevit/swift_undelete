@@ -46,6 +46,7 @@ Future work:
 
 """
 from swift.common import http, swob, utils, wsgi
+from swift.common import utils as swift_utils
 
 DEFAULT_TRASH_PREFIX = ".trash-"
 DEFAULT_TRASH_LIFETIME = 86400 * 90  # 90 days expressed in seconds
@@ -62,6 +63,8 @@ def close_if_possible(maybe_closable):
 
 
 def friendly_error(orig_error):
+    msg = 'Error copying object to trash'
+    self.logger.info(msg, orig_error)
     return "Error copying object to trash:\n" + orig_error
 
 
@@ -172,6 +175,8 @@ class UndeleteMiddleware(object):
                  trash_lifetime=DEFAULT_TRASH_LIFETIME,
                  block_trash_deletes=False):
         self.app = app
+	conf = ''
+	self.logger = swift_utils.get_logger(conf, log_route='keystoneauth')
         self.trash_prefix = trash_prefix
         self.trash_lifetime = trash_lifetime
         self.block_trash_deletes = block_trash_deletes
@@ -180,6 +185,7 @@ class UndeleteMiddleware(object):
     def __call__(self, req):
         # We only want to step in on object DELETE requests
         if req.method != 'DELETE':
+            # self.logger.info('Non-DELETE request')
             return self.app
         try:
             vrs, acc, con, obj = req.split_path(4, 4, rest_with_last=True)
@@ -190,6 +196,7 @@ class UndeleteMiddleware(object):
         #If X-Container-Meta-Undelete-Enabled:true is not set, then no action
         #required, so we step aside
         if not self.is_trashable(req,vrs,acc,con):
+	    # self.logger.info('No X-Container-Meta')
             return self.app            
 
         # Okay, this is definitely an object DELETE request; let's see if it's
@@ -221,7 +228,8 @@ class UndeleteMiddleware(object):
         """
         Checking if multistep removal header added to requested container
         """
-        return ('X-Container-Meta-Undelete-Enabled','true') in HeadContext(self.app).headers(req.environ,vrs,acc,con)
+	# self.logger.info(HeadContext(self.app).headers(req.environ,vrs,acc,con))
+        return ('x-container-meta-undelete-enabled','true') in HeadContext(self.app).headers(req.environ,vrs,acc,con)
 
     def copy_object(self, req, trash_container, obj):
         return CopyContext(self.app).copy(req.environ, trash_container, obj,
