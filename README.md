@@ -12,7 +12,10 @@ python setup.py install
 
 cat /etc/swift/proxy-server.conf
 
-pipeline =  swift_undelete
+Swift_undelete should be installed after bulk delete, otherwise only
+single delete requests will be processed
+
+pipeline = bulk swift_undelete
 
 [filter:swift_undelete]
 use = egg:swift_undelete#undelete
