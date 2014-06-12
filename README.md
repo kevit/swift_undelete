@@ -4,6 +4,25 @@ When this middleware is installed, an object DELETE request will cause a copy
 of the object to be saved into a "trash location" prior to deletion.
 Subsequently, an administrator can recover the deleted object.
 
+
+## Installation
+
+git clone
+python setup.py install
+
+cat /etc/swift/proxy-server.conf
+
+pipeline =  swift_undelete
+
+[filter:swift_undelete]
+use = egg:swift_undelete#undelete
+
+service swift-proxy restart
+
+
+## Making a container
+curl --request PUT -i -H "X-Auth-Token: token" -H "X-Container-Meta-Undelete-Enabled: true" "https://url:8090/v1/path/container"
+
 Caveats:
 
  * This does not provide protection against overwriting an object. Use Swift's
